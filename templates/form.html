@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="style.css">
+    </head>
+    {% if username %}
+        <p>Hello, {{ username }}! You are logged in.</p>
+    {% else %}
+        <p>You are not logged in. Please log in.</p>
+        <form action="{{url_for('login')}}" method="get">
+            <input type="submit" value="Log in here!">
+        </form>
+        <p>Don't have an account?</p>
+        <form action="{{url_for('register')}}" method="get">
+            <input type="submit" value="Register here!">
+        </form>
+    {% endif %}
+    <form action="{{ url_for('generate')}}"  method="post">
+        <label for="company">Company Name:</label>
+        <input type="text" id="company_name" name="cname" placeholder="name">
+        <label for="number">Number:</label>
+        <input type="text" id="number" name="num" placeholder="number">
+        <button type="submit">Generate</button>
+    </form>
+    <form action="{{ url_for('logout')}}"  method="get">
+        <button type="submit">Log out here</button>
+    </form>
+</html>

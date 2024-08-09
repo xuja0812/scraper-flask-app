@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<htmL>
+    <head>
+        <meta charset="UTF-8">
+        <title>Logout</title>
+    </head>
+    <body>
+        <div>
+            <h1>Logout page</h1>
+            <form action="{{url_for('logout')}}" method="post">
+                <label>Are you sure you want to log out?</label>
+                <input type="submit" value="Yes">
+            </form>
+            <form action="{{url_for('generate')}}" method="get">
+                <input type="submit" value="Back to generate page">
+            </form>
+        </div>
+    </body>
+</htmL>

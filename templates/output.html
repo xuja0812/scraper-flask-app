@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<htmL>
+    <head>
+        <meta charset="UTF-8">
+        <title>Output</title>
+    </head>
+    <body>
+        <div>
+            <h1>Output page</h1>
+            <button onclick="format()" value="Format"></button>
+            <form action="{{url_for('generate')}}" method="get">
+                <input type="submit" value="Back to generate">
+            </form>
+            <p>{{msg}}</p>
+
+        </div>
+    </body>
+</htmL>

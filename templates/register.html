@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<htmL>
+    <head>
+        <meta charset="UTF-8">
+        <title>Register</title>
+    </head>
+    <body>
+        <div>
+            <h1>Register here</h1>
+            <form action="{{url_for('register')}}" method="post">
+                <label>Username</label>
+                <input type="text" name="username" id="username" required>
+                <label>Password</label>
+                <input type="text" name="password" id="password" required>
+                <input type="submit" value="Register">
+                {{msg}}
+            </form>
+            <form action="{{url_for('login')}}" method="get">
+                <input type="submit" value="Back to log in">
+            </form>
+        </div>
+    </body>
+</htmL>
