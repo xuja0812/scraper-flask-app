@@ -13,35 +13,11 @@ import time
 import re
 import datetime
 
-def openSeeMore(driver):
-    seeMores = driver.find_elements(By.XPATH, '//div[@class="x1i10hfl xjbqb8w x1ejq31n xd10rxx x1sy0etr x17r0tee x972fbf xcfux61 x1qhh985 xm0m39n x9f619 x1y0dohk xt0psk2 xe8uvvx xdj226r x11i5rm xat24cr x1mh8g0r xexx8yu x4uap5 x18d9i69 xkhd6sd x16tdsg x1h12dhg xggy1nq x1a2a7pz x1sur9pj xkrqix2 xzsf02u x1s688f"]')
-    if(len(seeMores) > 0):
-        count = 0
-        for i in seeMores:
-            actions = ActionChains(driver)
-            try:
-                actions.move_to_element(i).click().perform()
-                count+=1
-            except:
-                try:
-                    driver.execute_script("arguments[0].click();", i) # MANIPULATES DOM IN JS INSTEAD OF ACTIONS
-                    count+=1
-                except:
-                    continue
-        time.sleep(1)
-    else:
-        pass
-
-def getBack(driver):
-    if not driver.current_url.endswith('reviews'):
-        driver.back()
-
 def archive(driver, reviewList):
     driver.execute_script("window.scrollTo(0, -document.body.scrollheight);")
     time.sleep(10)
 
     for index, l in enumerate(reviewList):
-        print("hello there")
         if(index % 10 == 0):
             driver.execute_script("arguments[0].scrollIntoView();", reviewList[0]) if index < 15 else driver.execute_script("arguments[0].scrollIntoView();", reviewList[index-15])
         time.sleep(1)
@@ -94,9 +70,7 @@ def scrape(url, n):
 
     # RETRIEVES ANY PAGE ONCE THE USER IS LOGGED IN
     time.sleep(5)
-    driver.get("https://www.facebook.com/McDonalds/reviews")
-    print("url:",url)
-    # driver.get(url)
+    driver.get(url)
     time.sleep(5)
 
     # UNFOLDS ALL THE ELEMNENTS ON THE PAGE BY OPENING REPLIES AND COMMENTS AND SCROLLING TO THE END OF THE PAGE
