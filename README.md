@@ -1,4 +1,4 @@
-Scraper Flask App
+# Scraper Flask App
 
 Main Scraper
 - uses Selenium to scrape reviews from a a specified URL on FaceBook as dictated by information being sent from the user (frontend) to a Flask backend
