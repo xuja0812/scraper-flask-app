@@ -6,10 +6,11 @@ from flask_mysqldb import MySQL
 conn = mysql.connector.connect(host="localhost", port="3307",user="root", password="", database="testbase")
 cursor = conn.cursor()
 
-# Define Flask object
 app = Flask(__name__)
 app.secret_key = 'super secret key'
 primary = 0
+
+# MAIN PAGE TO GENERATE REVIEWS
 
 @app.route('/', methods=['GET', 'POST'])
 def generate():
@@ -31,6 +32,8 @@ def home():
     else:
         return render_template("form.html")
 
+# ALLOWS A USER TO REGISTER THEIR USERNAME AND PASSWORD
+
 @app.route('/register', methods=['GET','POST'])
 def register():
     msg=''
@@ -42,6 +45,8 @@ def register():
         conn.commit()
         msg = "Registered successfully"
     return render_template('register.html', msg=msg)
+
+# ALLOWS A USER TO LOG IN TO THEIR ACCOUNT
 
 @app.route('/login', methods=['GET','POST'])
 def login():
@@ -63,12 +68,16 @@ def login():
         msg = "You are already logged in."
     return render_template('index.html', msg=msg)
 
+# ALLOWS A USER TO LOG OUT OF THEIR ACCOUNT
+
 @app.route('/logout', methods=['GET','POST'])
 def logout():
     if request.method == 'POST':
         session.pop('loggedin', None)
         session.pop('username', None)
     return render_template("logout.html")
+
+# ALLOWS A USER TO DELETE THEIR PROFILE
 
 @app.route('/delete', methods=['GET', 'POST'])
 def delete():
@@ -79,6 +88,6 @@ def delete():
         cursor.execute('DELETE FROM user WHERE username=%s AND password=%s',(username, password))
         msg = "Sucessfully deleted account"
     return render_template('delete.html',msg=msg)
-# Ensures that the python file will be run when the app starts
+
 if(__name__=='__main__'):
     app.run()
