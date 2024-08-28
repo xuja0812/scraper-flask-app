@@ -13,6 +13,8 @@ import time
 import re
 import datetime
 
+# Takes the current webpage and saves it locally as a static file to parse through
+
 def archive(driver, reviewList):
     driver.execute_script("window.scrollTo(0, -document.body.scrollheight);")
     time.sleep(10)
@@ -45,6 +47,8 @@ def archive(driver, reviewList):
                     print("written:",index)
                     return index, r
 
+# Main scrape function, uses a webdriver to access FaceBook
+
 def scrape(url, n):
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument('--headless')
@@ -60,6 +64,7 @@ def scrape(url, n):
         PASSWORD = line.split()[1]
 
     # LOGS INTO FACEBOOK USING INFORMATION FROM THE TEXT FILE
+    
     driver.get("http://facebook.com")
     wait = WebDriverWait(driver, 30)
     email_element = wait.until(EC.visibility_of_element_located((By.NAME, 'email')))
@@ -69,11 +74,13 @@ def scrape(url, n):
     password_element.send_keys(Keys.RETURN)
 
     # RETRIEVES ANY PAGE ONCE THE USER IS LOGGED IN
+    
     time.sleep(5)
     driver.get(url)
     time.sleep(5)
 
     # UNFOLDS ALL THE ELEMNENTS ON THE PAGE BY OPENING REPLIES AND COMMENTS AND SCROLLING TO THE END OF THE PAGE
+    
     count = 0
     switch = True
     old_numReviews = 0
@@ -82,22 +89,24 @@ def scrape(url, n):
     index = 0
     r = 0
 
+    # PARSES THROUGH THE CURRENT WEBPAGE AND CONTINUOUSLY SCROLLS DOWN TO REVEAL MORE REVIEWS, TERMINATING ONCE THE REVIEWS HAVE REACHED THE THRESHOLD
+    
     while(switch):
-
-        print("hello")
-        
         openSeeMore(driver) 
         getBack(driver)
 
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         time.sleep(15)
 
+        # FINDS ALL THE REVIEWS ON THE WEBPAGE
+        
         reviewList = driver.find_elements(By.XPATH, '//div[@class="x1yztbdb x1n2onr6 xh8yej3 x1ja2u2z"]')
         numReviews = len(reviewList)
         print("reviews:",numReviews)
         old_numReviews = numReviews
 
         # TERMINATE
+        
         if numReviews >= numberReviews:
             index, r = archive(driver, reviewList)
             switch = False
@@ -113,8 +122,10 @@ def scrape(url, n):
     ratings = []
     users = []
     texts = []
-    print("\n\n\n\nTHE LENGTH OF THE REVIEWS IS:",len(reviews),"\n\n\n\n")
     for idx, r in enumerate(reviews):
+
+        # FINDS ALL RATINGS FROM REVIEWS (either "DOES RECOMMEND" or "DOES NOT RECOMMEND")
+        
         rating = r.find('h2',{"class":"html-h2 xe8uvvx x11i5rnm xat24cr x1mh8g0r xexx8yu x4uap5 x18d9i69 xkhd6sd x1vvkbs x1heor9g x1qlqyl8 x1pd3egz x1a2a7pz x1gslohp x1yc453h"})
         if rating is not None:
             rating = rating.get_text()
@@ -125,11 +136,15 @@ def scrape(url, n):
         else:
             ratings.append("no rating")
 
+        # FINDS THE USER'S NAME
+
         user = r.find('a',{'class':'x1i10hfl xjbqb8w x1ejq31n xd10rxx x1sy0etr x17r0tee x972fbf xcfux6l x1qhh985 xm0m39n x9f619 x1ypdohk xt0psk2 xe8uvvx xdj266r x11i5rnm xat24cr x1mh8g0r xexx8yu x4uap5 x18d9i69 xkhd6sd x16tdsg8 x1hl2dhg xggy1nq x1a2a7pz x1sur9pj xkrqix3 xzsf02u x1s688f'})
         if user is not None:
             users.append(user.get_text().strip().split(" ")[0])
         else:
             users.append("No user")
+
+        # FINDS THE BODY OF THE REVIEWS
         
         text = r.find('span',{'class':'x193iq5w xeuugli x13faqbe x1vvkbs x1xmvt09 x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x xudqn12 x3x7a5m x6prxxf xvq8zen xo1l8bm xzsf02u x1yc453h'})
         if text is not None:
