@@ -8,18 +8,20 @@ import numpy as np
 # from text_processor import process
 from fb_scraper import scrape
 
+# DETERMINES THE SENTIMENT (1-5) OF A REVIEW
+
 def sentiment_score(review, tokenizer, model):
     tokens = tokenizer.encode(review, return_tensors='pt')
     result = model(tokens)
     return float(torch.argmax(result.logits)) + 1
 
 # CREATE TOKENIZER AND MODEL FROM PRETRAINED SOURCES
+
 def model_data(url, n):
     tokenizer = AutoTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
     model = AutoModelForSequenceClassification.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
 
     # SCRAPE THE DATA
-    print("HELLO")
     df = scrape(url, n)
 
     pd.set_option('display.max_columns', 7)
@@ -29,6 +31,8 @@ def model_data(url, n):
         dfAsString = df.to_string(header=False, index=False)
         data_file.write(dfAsString)
 
+    # FORMATTING
+    
     result = df.to_string(header=False, index=False)
     result_split = result.split("\n")
     printable = ""
@@ -53,10 +57,6 @@ def model_data(url, n):
             rev += words[i] + " "
         sentiment = words[len(words)-1]
         printable += "\n" + name + "\n\n" + rec + "\n\n" + rev + "\n\n" + sentiment + "\n"
-        # st.success(name)
-        # st.success(rec)
-        # st.success(rev)
-    # st.success(result)
     avg = sum / len(result_split)
     printable = "THE AVERAGE SENTIMENT IS: " + str(avg) + "\n\n\n" + printable
     return printable
