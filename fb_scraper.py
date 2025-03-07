@@ -1,165 +1,117 @@
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-import pandas as pd
 from selenium.webdriver.common.by import By
-from bs4 import BeautifulSoup as bs
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.action_chains import ActionChains
-
-import urllib.request
-import json
 import time
-import re
-import datetime
+import pandas as pd
+from bs4 import BeautifulSoup as bs
+import os
 
-# Takes the current webpage and saves it locally as a static file to parse through
-
-def archive(driver, reviewList):
-    driver.execute_script("window.scrollTo(0, -document.body.scrollheight);")
+# Function to archive the current webpage's content as an HTML file
+def archive(driver, reviewList, index):
+    driver.execute_script("window.scrollTo(0, -document.body.scrollHeight);")
     time.sleep(10)
-
-    for index, l in enumerate(reviewList):
-        if(index % 10 == 0):
-            driver.execute_script("arguments[0].scrollIntoView();", reviewList[0]) if index < 15 else driver.execute_script("arguments[0].scrollIntoView();", reviewList[index-15])
-        time.sleep(1)
+    
+    # Scroll through the reviews and save the page source after a few scrolls
+    for r in range(2):
         try:
-            driver.execute_script("arguments[0].scrollIntoView();", reviewList[index+15])
+            driver.execute_script("arguments[0].scrollIntoView();", reviewList[min(index + 15, len(reviewList)-1)])
         except:
             driver.execute_script("arguments[0].scrollIntoView();", reviewList[-1])
+        time.sleep(3)
+        
+        with open(f'./model/{index}_{r}.html', "w", encoding="utf-8") as file:
+            source_data = driver.page_source
+            bs_data = bs(source_data, 'html.parser')
+            file.write(str(bs_data.prettify()))
+            print(f"Written: {index}, {r}")
+            return index, r
 
-        time.sleep(1)
-        driver.execute_script("arguments[0].scrollIntoView();", reviewList[index])
-            
-        for r in range(2):
-            time.sleep(3)
-            try:
-                driver.execute_script("arguments[0].scrollIntoView();", reviewList[index+5])
-                time.sleep(3)
-            except:
-                driver.execute_script("arguments[0].scrollIntoView();", reviewList[-1])
-                driver.execute_script("arguments[0].scrollIntoView();", reviewList[index+r*3])
-                time.sleep(3)
-                with open(f'/Users/jasmi/Downloads/personal-project-xuja0812-3/model/{str(index)}_{r}.html',"w", encoding="utf-8") as file:
-                    source_data = driver.page_source
-                    bs_data = bs(source_data, 'html.parser')
-                    file.write(str(bs_data.prettify()))
-                    print("written:",index)
-                    return index, r
 
-# Main scrape function, uses a webdriver to access FaceBook
-
-def scrape(url, n):
+# Main scraping function to access Facebook and collect reviews
+def scrape(url, num_reviews_threshold):
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument('--headless')
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
 
-    cService = webdriver.ChromeService(executable_path=('/Users/jasmi/Downloads/chromedriver-win32/chromedriver-win32/chromedriver.exe'))
-    driver = webdriver.Chrome(service = cService, options = chrome_options)
+    # Set path to chromedriver
+    chromedriver_path = './chromedriver'
+    driver = webdriver.Chrome(executable_path=chromedriver_path, options=chrome_options)
 
-    with open('/Users/jasmi/Downloads/personal-project-xuja0812-3/model/fb_credentials.txt') as file:
-        line = file.readline()
-        EMAIL = line.split()[0]
-        PASSWORD = line.split()[1]
+    # Login to Facebook
+    with open('./model/fb_credentials.txt') as file:
+        EMAIL, PASSWORD = file.readline().split()
 
-    # LOGS INTO FACEBOOK USING INFORMATION FROM THE TEXT FILE
-    
     driver.get("http://facebook.com")
     wait = WebDriverWait(driver, 30)
-    email_element = wait.until(EC.visibility_of_element_located((By.NAME, 'email')))
-    email_element.send_keys(EMAIL)
+    wait.until(EC.visibility_of_element_located((By.NAME, 'email'))).send_keys(EMAIL)
     password_element = wait.until(EC.visibility_of_element_located((By.NAME, 'pass')))
-    password_element.send_keys(PASSWORD)
-    password_element.send_keys(Keys.RETURN)
-
-    # RETRIEVES ANY PAGE ONCE THE USER IS LOGGED IN
+    password_element.send_keys(PASSWORD + Keys.RETURN)
     
+    # Wait for page to load after login
     time.sleep(5)
     driver.get(url)
     time.sleep(5)
 
-    # UNFOLDS ALL THE ELEMNENTS ON THE PAGE BY OPENING REPLIES AND COMMENTS AND SCROLLING TO THE END OF THE PAGE
-    
-    count = 0
     switch = True
-    old_numReviews = 0
-    numberReviews = 0
+    index, r = 0, 0
 
-    index = 0
-    r = 0
-
-    # PARSES THROUGH THE CURRENT WEBPAGE AND CONTINUOUSLY SCROLLS DOWN TO REVEAL MORE REVIEWS, TERMINATING ONCE THE REVIEWS HAVE REACHED THE THRESHOLD
-    
-    while(switch):
+    while switch:
+        # Unfold more reviews if possible
         openSeeMore(driver) 
         getBack(driver)
-
+        
+        # Scroll to the end of the page
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         time.sleep(15)
 
-        # FINDS ALL THE REVIEWS ON THE WEBPAGE
-        
+        # Retrieve reviews on the current page
         reviewList = driver.find_elements(By.XPATH, '//div[@class="x1yztbdb x1n2onr6 xh8yej3 x1ja2u2z"]')
         numReviews = len(reviewList)
-        print("reviews:",numReviews)
-        old_numReviews = numReviews
+        print(f"Reviews: {numReviews}")
 
-        # TERMINATE
-        
-        if numReviews >= numberReviews:
-            index, r = archive(driver, reviewList)
+        # If threshold is met, stop scrolling and archive the page
+        if numReviews >= num_reviews_threshold:
+            index, r = archive(driver, reviewList, index)
             switch = False
 
-    with open(f'/Users/jasmi/Downloads/personal-project-xuja0812-3/model/{str(index)}_{r}.html',"r", encoding="utf-8") as file:
-        f = file.read()
+    # Read the archived HTML file and parse the reviews
+    with open(f'./model/{index}_{r}.html', "r", encoding="utf-8") as file:
+        page = bs(file.read(), 'lxml')
 
-    page = bs(f, 'lxml')
-    reviews = page.find_all('div', {
-        'class':'x1yztbdb x1n2onr6 xh8yej3 x1ja2u2z'
-                                })
+    reviews = page.find_all('div', {'class': 'x1yztbdb x1n2onr6 xh8yej3 x1ja2u2z'})
+    ratings, users, texts = [], [], []
 
-    ratings = []
-    users = []
-    texts = []
-    for idx, r in enumerate(reviews):
+    for review in reviews:
+        # Extract rating
+        rating = review.find('h2',{"class":"html-h2 xe8uvvx x11i5rnm xat24cr x1mh8g0r xexx8yu x4uap5 x18d9i69 xkhd6sd x1vvkbs x1heor9g x1qlqyl8 x1pd3egz x1a2a7pz x1gslohp x1yc453h"})
 
-        # FINDS ALL RATINGS FROM REVIEWS (either "DOES RECOMMEND" or "DOES NOT RECOMMEND")
-        
-        rating = r.find('h2',{"class":"html-h2 xe8uvvx x11i5rnm xat24cr x1mh8g0r xexx8yu x4uap5 x18d9i69 xkhd6sd x1vvkbs x1heor9g x1qlqyl8 x1pd3egz x1a2a7pz x1gslohp x1yc453h"})
-        if rating is not None:
-            rating = rating.get_text()
-            if("recommends" in rating):
-                ratings.append("recommends")
-            else:
-                ratings.append("does not recommend")
-        else:
-            ratings.append("no rating")
+        ratings.append("recommends" if rating and "recommends" in rating.get_text() else "does not recommend" if rating else "no rating")
 
-        # FINDS THE USER'S NAME
+        # Extract user name
+        user = review.find('a',{'class':'x1i10hfl xjbqb8w x1ejq31n xd10rxx x1sy0etr x17r0tee x972fbf xcfux6l x1qhh985 xm0m39n x9f619 x1ypdohk xt0psk2 xe8uvvx xdj266r x11i5rnm xat24cr x1mh8g0r xexx8yu x4uap5 x18d9i69 xkhd6sd x16tdsg8 x1hl2dhg xggy1nq x1a2a7pz x1sur9pj xkrqix3 xzsf02u x1s688f'})
 
-        user = r.find('a',{'class':'x1i10hfl xjbqb8w x1ejq31n xd10rxx x1sy0etr x17r0tee x972fbf xcfux6l x1qhh985 xm0m39n x9f619 x1ypdohk xt0psk2 xe8uvvx xdj266r x11i5rnm xat24cr x1mh8g0r xexx8yu x4uap5 x18d9i69 xkhd6sd x16tdsg8 x1hl2dhg xggy1nq x1a2a7pz x1sur9pj xkrqix3 xzsf02u x1s688f'})
-        if user is not None:
-            users.append(user.get_text().strip().split(" ")[0])
-        else:
-            users.append("No user")
+        users.append(user.get_text().strip().split()[0] if user else "No user")
 
-        # FINDS THE BODY OF THE REVIEWS
-        
-        text = r.find('span',{'class':'x193iq5w xeuugli x13faqbe x1vvkbs x1xmvt09 x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x xudqn12 x3x7a5m x6prxxf xvq8zen xo1l8bm xzsf02u x1yc453h'})
-        if text is not None:
-            texts.append(' '.join([i.strip() for i in text.get_text().split()]))
-        else:
-            text = r.find('div',{'class':'xdj266r x11i5rnm xat24cr x1mh8g0r x1vvkbs x126k92a'})
-            if text is not None:
-                texts.append(text.get_text().strip())
-            else:
-                texts.append('no text')
+        # Extract review text
+        text = review.find('span',{'class':'x193iq5w xeuugli x13faqbe x1vvkbs x1xmvt09 x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x xudqn12 x3x7a5m x6prxxf xvq8zen xo1l8bm xzsf02u x1yc453h'})
 
+        if not text:
+            text = review.find('div',{'class':'xdj266r x11i5rnm xat24cr x1mh8g0r x1vvkbs x126k92a'})
+        texts.append(' '.join([i.strip() for i in text.get_text().split()]) if text else "no text")
+
+    # Store data in a DataFrame
     master = pd.DataFrame({
-        'ratings':ratings, 
-        'users':users,
-        'texts':texts
-                    })
+        'ratings': ratings,
+        'users': users,
+        'texts': texts
+    })
     
+    driver.quit()
     return master
+
+
+
