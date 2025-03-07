@@ -1,62 +1,42 @@
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
-import requests
-from bs4 import BeautifulSoup
 import re
 import pandas as pd
-import numpy as np
-# from text_processor import process
 from fb_scraper import scrape
 
-# DETERMINES THE SENTIMENT (1-5) OF A REVIEW
+# Load pre-trained sentiment analysis model and tokenizer
+def load_model():
+    tokenizer = AutoTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
+    model = AutoModelForSequenceClassification.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
+    return tokenizer, model
 
+# Determine the sentiment score (1-5) of a review
 def sentiment_score(review, tokenizer, model):
-    tokens = tokenizer.encode(review, return_tensors='pt')
+    tokens = tokenizer.encode(review[:512], return_tensors='pt')  # Limit to 512 tokens
     result = model(tokens)
     return float(torch.argmax(result.logits)) + 1
 
-# CREATE TOKENIZER AND MODEL FROM PRETRAINED SOURCES
-
-def model_data(url, n):
-    tokenizer = AutoTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
-    model = AutoModelForSequenceClassification.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
-
-    # SCRAPE THE DATA
-    df = scrape(url, n)
-
-    pd.set_option('display.max_columns', 7)
-    df['sentiment'] = df['texts'].apply(lambda x: sentiment_score(x[:512], tokenizer, model))
-
-    with open(f'/Users/jasmi/Downloads/personal-project-xuja0812-3/model/FINAL_DATA.txt',"w", encoding="utf-8") as data_file:
-        dfAsString = df.to_string(header=False, index=False)
-        data_file.write(dfAsString)
-
-    # FORMATTING
+# Process scraped data and compute sentiment scores
+def model_data(url, num_reviews):
+    tokenizer, model = load_model()
+    df = scrape(url, num_reviews)
     
-    result = df.to_string(header=False, index=False)
-    result_split = result.split("\n")
-    printable = ""
-    sum = 0.0
-    for review in result_split:
-        words = re.split(r"\s+", review)
-        sen = float(words[len(words)-1])
-        sum += sen
-    for review in result_split:
-        words = re.split(r"\s+", review)
-        rec = ""
-        index = 0
-        while index < len(words) and words[index] != 'recommend' and words[index] != 'recommends' and words[index] != 'rating':
-            rec += words[index] + " "
-            index+=1
-        rec += words[index]
-        index += 1
-        name = words[index]
-        index += 1
-        rev = ""
-        for i in range (index, len(words)-1):
-            rev += words[i] + " "
-        sentiment = words[len(words)-1]
-        printable += "\n" + name + "\n\n" + rec + "\n\n" + rev + "\n\n" + sentiment + "\n"
-    avg = sum / len(result_split)
-    printable = "THE AVERAGE SENTIMENT IS: " + str(avg) + "\n\n\n" + printable
+    df['sentiment'] = df['texts'].apply(lambda x: sentiment_score(x, tokenizer, model))
+    
+    output_path = '/Users/jasmi/Downloads/personal-project-xuja0812-3/model/FINAL_DATA.txt'
+    df.to_csv(output_path, sep=' ', index=False, header=False)
+    
+    # Format output
+    avg_sentiment = df['sentiment'].mean()
+    formatted_reviews = []
+    
+    for _, row in df.iterrows():
+        user = row['users']
+        recommendation = ' '.join(re.split(r'\s+', row['ratings'])[:2])  # Extract recommendation text
+        review_text = row['texts']
+        sentiment = row['sentiment']
+        
+        formatted_reviews.append(f"\n{user}\n\n{recommendation}\n\n{review_text}\n\nSentiment: {sentiment}\n")
+    
+    printable = f"THE AVERAGE SENTIMENT IS: {avg_sentiment:.2f}\n\n" + "".join(formatted_reviews)
     return printable
