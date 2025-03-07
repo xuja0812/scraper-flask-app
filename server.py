@@ -1,93 +1,96 @@
-from flask import Flask, request, render_template, session, redirect, url_for
+from flask import Flask, request, render_template, session, redirect, url_for, flash
 from new_model import model_data
-import mysql.connector
 from flask_mysqldb import MySQL
-
-conn = mysql.connector.connect(host="localhost", port="3307",user="root", password="", database="testbase")
-cursor = conn.cursor()
+from werkzeug.security import generate_password_hash, check_password_hash
+import os
 
 app = Flask(__name__)
-app.secret_key = 'super secret key'
-primary = 0
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'super_secret_key')
 
-# MAIN PAGE TO GENERATE REVIEWS
+# Database Configuration
+app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_PORT'] = 3307
+app.config['MYSQL_USER'] = 'root'
+app.config['MYSQL_PASSWORD'] = ''
+app.config['MYSQL_DB'] = 'testbase'
+
+mysql = MySQL(app)
 
 @app.route('/', methods=['GET', 'POST'])
 def generate():
     if request.method == 'POST':
         company = request.form.get("cname")
         num = request.form.get("num")
-        url = "https://www.facebook.com/"+company+"/reviews"
+        url = f"https://www.facebook.com/{company}/reviews"
         output = model_data(url, int(num))
-        return render_template("output.html",msg=output)
-    if 'username' in session:
-        return render_template("form.html", username=session['username'])
-    else:
-        return render_template("form.html")
+        return render_template("output.html", msg=output)
+    return render_template("form.html", username=session.get('username'))
 
 @app.route('/home')
 def home():
-    if('username' in session):
-        return render_template("form.html", username=session['username'])
-    else:
-        return render_template("form.html")
+    return render_template("form.html", username=session.get('username'))
 
-# ALLOWS A USER TO REGISTER THEIR USERNAME AND PASSWORD
-
-@app.route('/register', methods=['GET','POST'])
+@app.route('/register', methods=['GET', 'POST'])
 def register():
-    msg=''
     if request.method == 'POST':
         username = request.form['username']
-        password = request.form['password']
-        cursor.execute('INSERT INTO user (user, username, password) VALUES (%s, %s, %s)',(primary, username, password))
-        primary += 1
-        conn.commit()
-        msg = "Registered successfully"
-    return render_template('register.html', msg=msg)
+        password = generate_password_hash(request.form['password'])
+        
+        cursor = mysql.connection.cursor()
+        cursor.execute('INSERT INTO user (username, password) VALUES (%s, %s)', (username, password))
+        mysql.connection.commit()
+        cursor.close()
+        
+        flash("Registered successfully", "success")
+        return redirect(url_for('login'))
+    return render_template('register.html')
 
-# ALLOWS A USER TO LOG IN TO THEIR ACCOUNT
-
-@app.route('/login', methods=['GET','POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    msg=''
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        cursor.execute('SELECT * FROM user WHERE username=%s AND password=%s',(username, password))
-
+        
+        cursor = mysql.connection.cursor()
+        cursor.execute('SELECT * FROM user WHERE username=%s', (username,))
         record = cursor.fetchone()
-        if record: # session is the duration where the user logs in and out
+        cursor.close()
+        
+        if record and check_password_hash(record[2], password):
             session['loggedin'] = True
             session['username'] = record[1]
-            # return redirect(url_for('home'))
-            return render_template('form.html',username=session['username'])
+            flash("Login successful", "success")
+            return redirect(url_for('home'))
         else:
-            msg='Incorrect username or password, try again.'
-    if 'username' in session:
-        msg = "You are already logged in."
-    return render_template('index.html', msg=msg)
+            flash("Incorrect username or password", "danger")
+    return render_template('index.html')
 
-# ALLOWS A USER TO LOG OUT OF THEIR ACCOUNT
-
-@app.route('/logout', methods=['GET','POST'])
+@app.route('/logout')
 def logout():
-    if request.method == 'POST':
-        session.pop('loggedin', None)
-        session.pop('username', None)
-    return render_template("logout.html")
-
-# ALLOWS A USER TO DELETE THEIR PROFILE
+    session.clear()
+    flash("Logged out successfully", "info")
+    return redirect(url_for('login'))
 
 @app.route('/delete', methods=['GET', 'POST'])
 def delete():
-    msg = ""
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        cursor.execute('DELETE FROM user WHERE username=%s AND password=%s',(username, password))
-        msg = "Sucessfully deleted account"
-    return render_template('delete.html',msg=msg)
+        
+        cursor = mysql.connection.cursor()
+        cursor.execute('SELECT * FROM user WHERE username=%s', (username,))
+        record = cursor.fetchone()
+        
+        if record and check_password_hash(record[2], password):
+            cursor.execute('DELETE FROM user WHERE username=%s', (username,))
+            mysql.connection.commit()
+            cursor.close()
+            session.clear()
+            flash("Account successfully deleted", "success")
+            return redirect(url_for('register'))
+        else:
+            flash("Incorrect username or password", "danger")
+    return render_template('delete.html')
 
-if(__name__=='__main__'):
-    app.run()
+if __name__ == '__main__':
+    app.run(debug=True)
