@@ -1,0 +1,174 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
+
+/* Reset & Base */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+  color: #333;
+  overflow-y: auto;
+}
+
+/* Container Styling */
+.app-container {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  width: 95%;
+  max-width: 800px;
+  padding: 2.5rem;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  animation: fadeIn 0.8s ease;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Headings */
+h1 {
+  font-weight: 800;
+  font-size: 2.5rem;
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+h2, h3 {
+  color: #333;
+  text-align: center;
+}
+
+/* Sections */
+.welcome-section,
+.auth-section,
+.chart-section {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 12px;
+  padding: 1.75rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+}
+
+/* Buttons */
+button {
+  margin-top: 1rem;
+  background: linear-gradient(90deg, #8e44ad, #c471ed);
+  border: none;
+  color: white;
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+  box-shadow: 0 5px 15px rgba(142, 68, 173, 0.4);
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(142, 68, 173, 0.6);
+}
+
+button:disabled {
+  background: #e0cfe6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Inputs */
+.auth-input,
+.form-input {
+  color: black;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  border: 2px solid #ccc;
+  border-radius: 10px;
+  background: #fff;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.auth-input:focus,
+.form-input:focus {
+  border-color: #b27bcf;
+  box-shadow: 0 0 5px rgba(178, 123, 207, 0.5);
+  outline: none;
+}
+
+.form label {
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  display: block;
+}
+
+/* Auth Error */
+.auth-error {
+  color: #f44336;
+  font-weight: bold;
+  margin-top: 0.5rem;
+}
+
+/* Result Box */
+.result {
+  background: #ffffffdd;
+  padding: 1.5rem;
+  border-radius: 10px;
+  font-weight: 500;
+  font-size: 1rem;
+  color: #7b1fa2;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  border-left: 6px solid #b27bcf;
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* Chart Section */
+.chart-section {
+  text-align: center;
+  animation: fadeIn 1s ease-in;
+}
+
+.chart-section h2 {
+  margin-bottom: 1rem;
+  color: #444;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .app-container {
+    padding: 1.5rem;
+  }
+
+  button {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+
+  .auth-section button,
+  .welcome-section button {
+    margin-top: 0.75rem;
+  }
+
+  .auth-input,
+  .form-input {
+    font-size: 0.95rem;
+  }
+}
