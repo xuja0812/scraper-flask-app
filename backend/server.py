@@ -7,10 +7,10 @@ from new_model import analyze_reviews
 from dotenv import load_dotenv
 import json
 
-load_dotenv()  
+load_dotenv()
 
 app = Flask(__name__, static_folder='frontend/dist', static_url_path='/')
-CORS(app, supports_credentials=True)  
+CORS(app, supports_credentials=True)
 
 app.secret_key = os.getenv('FLASK_SECRET_KEY')
 if not app.secret_key:
@@ -55,7 +55,7 @@ def generate_api():
             neutral = summary.get('neutral') if 'neutral' in summary else (summary.get('total', 0) - positive - negative if summary else None)
             total = summary.get('total')
             average_score = summary.get('average_score')
-            raw_result = json.dumps(result)  # store full result as JSON string
+            raw_result = json.dumps(result)
 
             cursor = mysql.connection.cursor()
             cursor.execute(
@@ -159,7 +159,6 @@ def logout_api():
     session.clear()
     return jsonify({"msg": "Logged out"}), 200
 
-# not in use right now, should add tab in frontend
 @app.route('/api/delete', methods=['POST'])
 def delete_api():
     try:

@@ -14,8 +14,8 @@ function SentimentChart({ summary }) {
   ]
 
   return (
-    <div style={{ width: '100%', height: 300 }}>
-      <ResponsiveContainer>
+    <div className="chart-container">
+      <ResponsiveContainer width="100%" height={300}>
         <PieChart>
           <Pie
             data={data}
@@ -31,7 +31,7 @@ function SentimentChart({ summary }) {
             ))}
           </Pie>
           <Tooltip />
-          <Legend />
+          <Legend verticalAlign="bottom" height={36} />
         </PieChart>
       </ResponsiveContainer>
     </div>
@@ -43,6 +43,8 @@ function App() {
   const [numReviews, setNumReviews] = useState(10)
   const [result, setResult] = useState('')
   const [summary, setSummary] = useState(null)
+  const [commonWords, setCommonWords] = useState([])
+  const [commonComplaints, setCommonComplaints] = useState([])
   const [loading, setLoading] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -62,12 +64,16 @@ function App() {
     if (!loggedInUser) {
       setResult('Please log in to analyze reviews.')
       setSummary(null)
+      setCommonWords([])
+      setCommonComplaints([])
       return
     }
 
     setLoading(true)
     setResult('')
     setSummary(null)
+    setCommonWords([])
+    setCommonComplaints([])
 
     try {
       const response = await fetch('/api/generate', {
@@ -82,6 +88,8 @@ function App() {
       if (data.error) {
         setResult(`Error: ${data.error}`)
         setSummary(null)
+        setCommonWords([])
+        setCommonComplaints([])
       } else if (data.summary) {
         const { total, positive, negative, average_score } = data.summary
         const positiveSample = data.positive_reviews?.[0]?.text || 'None'
@@ -97,13 +105,19 @@ function App() {
 
         setResult(formatted)
         setSummary(data.summary)
+        setCommonWords(data.common_words || [])
+        setCommonComplaints(data.common_complaints || [])
       } else {
         setResult('No data returned')
         setSummary(null)
+        setCommonWords([])
+        setCommonComplaints([])
       }
     } catch (err) {
       setResult('Error fetching results. Check if the backend is running.')
       setSummary(null)
+      setCommonWords([])
+      setCommonComplaints([])
     } finally {
       setLoading(false)
     }
@@ -148,6 +162,8 @@ function App() {
     setLoggedInUser(null)
     setResult('')
     setSummary(null)
+    setCommonWords([])
+    setCommonComplaints([])
   }
 
   return (
@@ -155,40 +171,36 @@ function App() {
       <h1>Google Review Sentiment Analyzer</h1>
 
       {loggedInUser ? (
-        <div className="welcome-section">
-          <p>Welcome, {loggedInUser}!</p>
-          <button onClick={handleLogout}>Logout</button>
+        <div className="auth-welcome">
+          <p>Welcome, <strong>{loggedInUser}</strong>!</p>
+          <button onClick={handleLogout} className="btn-logout">Logout</button>
         </div>
       ) : (
-        <div className="auth-section">
+        <div className="auth-welcome">
           <h3>Login or Register</h3>
           <input
             type="text"
             placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="auth-input"
+            className="input-auth"
           />
           <input
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="auth-input"
+            className="input-auth"
           />
-          <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-            <button onClick={handleLogin} style={{ marginRight: '1rem', marginBottom: '0.5rem' }}>
-              Login
-            </button>
-            <button onClick={handleRegister} style={{ marginBottom: '0.5rem' }}>
-              Register
-            </button>
+          <div className="auth-buttons">
+            <button onClick={handleLogin} className="btn-primary">Login</button>
+            <button onClick={handleRegister} className="btn-secondary">Register</button>
           </div>
           {authError && <p className="auth-error">{authError}</p>}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="form">
+      <form onSubmit={handleSubmit} className="form-container">
         <label>
           Google Business URL:
           <input
@@ -197,7 +209,7 @@ function App() {
             onChange={(e) => setUrl(e.target.value)}
             required
             placeholder="https://www.google.com/maps/place/BusinessName/"
-            className="form-input"
+            className="input-form"
           />
         </label>
 
@@ -208,28 +220,54 @@ function App() {
             value={numReviews}
             onChange={(e) => setNumReviews(Number(e.target.value))}
             min="1"
-            max="20"
+            max="100"
             required
-            className="form-input"
+            className="input-form"
           />
         </label>
 
-        <button type="submit" disabled={loading || !loggedInUser}>
+        <button type="submit" disabled={loading || !loggedInUser} className="btn-primary">
           {loading ? 'Analyzing...' : 'Analyze'}
         </button>
       </form>
 
-      <pre className="result">{result}</pre>
+      <pre className="result-box">{result}</pre>
 
       {summary && (
-        <div className="chart-section">
+        <div className="summary-section">
           <h2>Sentiment Summary</h2>
           <SentimentChart summary={summary} />
+
+          {commonWords.length > 0 && (
+            <div className="common-words">
+              <h3>Most Common Words</h3>
+              <ul>
+                {commonWords.map(({ phrase, count }, index) => (
+                  <li key={index}>{phrase} ({count})</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {commonComplaints.length > 0 ? (
+            <div className="common-complaints">
+              <h3>Complaints</h3>
+              <ul className="list-disc list-inside">
+                {commonComplaints.map((snippet, index) => (
+                  <li key={index} className="text-sm text-gray-800">
+                    {snippet}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p className="text-gray-500 italic">No complaints found.</p>
+          )}
         </div>
       )}
 
       {loggedInUser && (
-        <div className="scrape-history-section">
+        <div className="history-section">
           <ScrapeHistory />
         </div>
       )}
